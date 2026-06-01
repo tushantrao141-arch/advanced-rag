@@ -1,59 +1,63 @@
 import os
 import faiss
 import numpy as np
+from tqdm import tqdm
+
+import config
 from utils import Utils
 from dataset import Dataset
-from colorama import Fore, Style
-from tqdm import tqdm
 from embeddings import Embeddings
 from retriever import Retriever
 from reranker import Reranker
 from llm import LLM
 
 
-if __name__ == '__main__':
-    print(f"{Fore.YELLOW}=====Advanced RAG Pipeline====={Style.RESET_ALL}")
-    # Load Utils
-    utils = Utils()
-    utils.check_dir(".indices")
-    
-    # Load the dataset (train split) that's already chunked
-    print(f"{Fore.RED}1.) Loading and chunking dataset...{Style.RESET_ALL}")
-    dataset = Dataset("jamescalam/ai-arxiv-chunked", "train")
+def build_or_load_index(documents, embed_model: Embeddings) -> faiss.Index:
+    if os.path.exists(config.INDEX_PATH):
+        return faiss.read_index(config.INDEX_PATH)
+
+    index = faiss.IndexFlatL2(config.EMBEDDING_DIMENSION)
+
+    for i in tqdm(range(0, len(documents), config.BATCH_SIZE), desc="Embedding Documents"):
+        batch = documents[i:i + config.BATCH_SIZE]
+        embeds = embed_model.get_embedding(batch["text"])
+        index.add(np.array(embeds))
+
+    faiss.write_index(index, config.INDEX_PATH)
+    return index
+
+
+def main():
+    Utils.check_dir(config.INDEX_DIR)
+
+    dataset = Dataset(config.DATASET_NAME, config.DATASET_SPLIT)
     documents = dataset.get_dataset()
-    
-    # Generate embeddings for the documents using SentenceBERT and index them using FAISS
-    print(f"{Fore.RED}2.) Generating Embedding Vectors using Sentence BERT and indexing using FAISS...{Style.RESET_ALL}")
-    sentence_bert = Embeddings("all-mpnet-base-v2")
-    if not os.path.exists(".indices/index_latest.idx"):
-        index = faiss.IndexFlatL2(768)
-        batch_size = int(os.getenv("BATCH_SIZE"))
-        for i in tqdm(range(0, len(documents), batch_size), desc="Embedding Documents", colour="green"):
-            batch = documents[i:i+batch_size]
-            embeds = sentence_bert.get_embedding(batch["text"])
-            # to_upsert = list(zip(batch["id"], embeds, batch["metadata"]))
-            # index.add(np.array(to_upsert))
-            index.add(np.array(embeds))
-            # Save the index
-            faiss.write_index(index, ".indices/index_latest.idx")
-    else:
-        # Load the index
-        index = faiss.read_index(".indices/index_latest.idx")
-    
-    # Retrieve the top-k documents for a query using the FAISS index
-    print(f"{Fore.RED}3.) Retrieve Top-K documents using FAISS...{Style.RESET_ALL}")
+
+    embed_model = Embeddings(config.EMBEDDING_MODEL_NAME)
+    index = build_or_load_index(documents, embed_model)
+
     query = "Can you explain why we would want to do RLHF?"
     retriever = Retriever()
-    docs = retriever.search(documents=documents, embed_model=sentence_bert, index=index, query=query, top_k=20)
-    
-    # Rerank the top-n documents using DistilBERT
-    print(f"{Fore.RED}4.) Re-Ranking documents using distilBERT and retrieving Top-N documents...{Style.RESET_ALL}")
-    reranker = Reranker("sentence-transformers/msmarco-distilbert-base-v3")
-    reranked_docs = reranker.rerank(docs, query, top_n=5)
+    docs = retriever.search(
+        documents=documents,
+        embed_model=embed_model,
+        index=index,
+        query=query,
+        top_k=config.RETRIEVER_TOP_K,
+    )
+
+    reranker = Reranker(config.RERANKER_MODEL_NAME)
+    reranked_docs = reranker.rerank(docs, query, top_n=config.RERANKER_TOP_N)
     context = "\n".join([doc[0] for doc in reranked_docs])
-    
-    # Generate response from OPENAI Model
-    print(f"{Fore.RED}5.) Generate reponse using LLM...{Style.RESET_ALL}")
-    llm = LLM(model=os.getenv("MODEL_NAME"), temperature=0)
-    llm_response = llm.generate(query=query, context=context)
-    print(f"Answer: {Fore.GREEN}{llm_response}{Style.RESET_ALL}")
+
+    llm = LLM(model=config.LLM_MODEL_NAME, temperature=config.LLM_TEMPERATURE)
+    answer = llm.generate(query=query, context=context)
+
+    print("\n" + "=" * 60)
+    print(f"Query: {query}")
+    print("=" * 60)
+    print(f"\n{answer}\n")
+
+
+if __name__ == "__main__":
+    main()

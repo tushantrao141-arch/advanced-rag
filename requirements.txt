@@ -6,4 +6,6 @@ langchain-openai
 faiss-cpu
 numpy
 tqdm
-colorama
+python-dotenv
+streamlit
+pytest

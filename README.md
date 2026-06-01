@@ -1,56 +1,53 @@
 # Advanced RAG Pipeline
 
-The Advanced RAG Pipeline is a powerful system that leverages various state-of-the-art NLP models and techniques to perform semantic search and retrieval, reranking, and response generation. It is designed to work with pre-chunked documents from Hugging Face, generate embeddings using SentenceBERT, utilize FAISS for HNSW semantic search, rerank using distilBERT, and generate responses using OpenAI GPT3.5.
+A two-stage Retrieval-Augmented Generation (RAG) pipeline featuring semantic search with FAISS, cross-encoder reranking, and OpenAI LLM response generation.
 
 ## Features
+- **Semantic Search**: FAISS index utilizing SentenceBERT (`all-mpnet-base-v2`) embeddings.
+- **Reranking**: Cross-encoder model (`msmarco-distilbert-base-v3`) to rerank retrieved documents.
+- **Response Generation**: OpenAI GPT-3.5 via LangChain.
+- **Evaluation**: Built-in retrieval metrics (Recall@K, MRR, NDCG@K).
+- **Interface**: Streamlit web application.
+- **Containerization**: Docker configuration.
 
-- Chunked Documents: The pipeline supports pre-chunked documents from Hugging Face, allowing for efficient processing and retrieval. These documents are a collection of research papers from arvix.
+## Setup
 
-- Embedding Generation: SentenceBERT is used to generate high-quality embeddings for the documents, capturing their semantic meaning.
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/Kdotseth7/advanced-rag.git
+   cd advanced-rag
+   ```
 
-- Semantic Search and Retrieval: FAISS with HNSW index is employed for efficient semantic search and retrieval, enabling fast and accurate retrieval of relevant documents.
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-- Reranking: The pipeline utilizes distilBERT for reranking the retrieved documents, ensuring the most relevant documents are prioritized.
+3. **Configure environment variables**:
+   Create a `.env` file from the example:
+   ```bash
+   cp .env.example .env
+   ```
+   Add your `OPENAI_API_KEY` to the `.env` file.
 
-- Response Generation: OpenAI GPT3.5 is used to generate informative and contextually relevant responses based on the retrieved and reranked documents.
+## Usage
 
-## Installation
+### Run CLI Pipeline
+```bash
+python main.py
+```
 
-To install and set up the Advanced RAG Pipeline, follow these steps:
+### Run Streamlit UI
+```bash
+streamlit run app.py
+```
 
-1. Clone the repository:
+### Run with Docker Compose
+```bash
+docker-compose up --build
+```
 
-    ```shell
-    git clone https://github.com/Kdotseth7/advanced-rag.git
-    ```
-
-2. Install the required dependencies:
-
-    ```shell
-    pip install -r requirements.txt
-    ```
-
-3. Configure the pipeline:
-    - Update the environment file `.env` with the following settings:
-
-    ```shell
-    OPENAI_API_KEY="your-openai-key"
-    TOKENIZERS_PARALLELISM=true
-    BATCH_SIZE=32
-    MODEL_NAME="model-name"
-    ```
-
-4. Run the pipeline:
-
-    ```shell
-    python main.py
-    ```
-
-
-## Contributing
-
-Contributions to the Advanced RAG Pipeline are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request.
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
+### Run Tests
+```bash
+pytest tests/ -v
+```

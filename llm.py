@@ -7,17 +7,15 @@ load_dotenv(find_dotenv())
 
 
 class LLM:
-    """LLM class for RAG pipeline after re-ranking documents."""
 
     def __init__(self, model: str, temperature: float = 0.0) -> None:
         self.model = model
         self.temperature = temperature
 
     def generate(self, query: str, context: str) -> str:
-        """Generate a response from OpenAI LLM using the given context."""
-
         template = """
 You are an assistant that answers questions using only the given context.
+If the context does not contain enough information to answer, say so clearly.
 
 Context:
 {context}
@@ -27,7 +25,6 @@ Question:
 
 Answer:
 """
-
         llm = ChatOpenAI(
             model=self.model,
             temperature=self.temperature
@@ -40,9 +37,7 @@ Answer:
 
         chain = prompt | llm | StrOutputParser()
 
-        result = chain.invoke({
+        return chain.invoke({
             "context": context,
             "query": query
         })
-
-        return result
