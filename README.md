@@ -158,5 +158,4 @@ All configuration is centralized in [`config.py`](config.py):
 | `CHUNK_OVERLAP` | `50` | Overlap between chunks |
 
 ## License
-
 This project is open source and available under the [MIT License](LICENSE).
