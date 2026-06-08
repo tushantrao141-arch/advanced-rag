@@ -37,8 +37,7 @@ def main():
     index = build_or_load_index(documents, embed_model)
 
     query = "Can you explain why we would want to do RLHF?"
-    retriever = Retriever()
-    docs = retriever.search(
+    docs = Retriever.search(
         documents=documents,
         embed_model=embed_model,
         index=index,
